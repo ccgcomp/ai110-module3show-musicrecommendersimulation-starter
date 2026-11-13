@@ -74,8 +74,6 @@ I also wrote 4 pytest tests (the 2 starter ones plus a CSV loading test and a pe
 
 ## 9. Personal Reflection  
 
-*(Drafted by Claude from the real run results. Cody should rewrite anything that is not true to him.)*
-
 - **What I learned:** a recommender is a scoring rule plus a sort, and the weights are design choices. Changing two weights changed which songs came out in the top five, so the "taste" the system shows comes partly from my choices, not just the data.
 - **Where AI helped and where I double-checked:** Claude wrote the scoring code and the draft songs, and I approved all of its default choices (weights, songs, profiles, experiment). The starter `main.py` imported `from recommender import ...`, which fails with `python -m src.main`, so that was fixed and checked by running the program. The README comparisons and the numbers in this card were checked against the real output of the run.
 - **Something unexpected:** the conflicting profile still returned a quiet classical song as number one for a user who asked for high energy, because genre and mood points added up to more than the energy score could make up.
