@@ -2,16 +2,33 @@
 
 ## Project Summary
 
-In this project you will build and explain a small music recommender system.
+This project is a small **content-based music recommender** I built for CodePath AI110 (Project 3). It reads a catalog of 18 songs from a CSV file, compares each song to a user's taste profile (favorite genre, favorite mood, and target energy), gives every song a score along with a short list of reasons, and prints the best matches.
 
-Your goal is to:
+The goal was not to build something that rivals Spotify. It was to see, in a system small enough to read in one sitting, how data turns into a ranking, and where bias can sneak in. I represented songs and a user's taste as data, wrote a scoring rule, ran it on five different user profiles, ran one experiment that changed the weights, and wrote down what the system gets right and wrong.
 
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
+**What it does in one paragraph:** for each song, it adds up points: 2.0 for matching the user's favorite genre, 1.0 for matching their favorite mood, and up to 1.0 for having an energy level close to their target. The songs are then sorted by score. Every result comes with the reasons for its score (for example `genre match (+2.0)`), so you can always see why a song was picked.
 
-My version is a small content-based music recommender. It reads 18 songs from a CSV, compares each one to a user's taste profile (favorite genre, favorite mood, target energy), gives every song a score with a short list of reasons, and prints the top matches.
+**What I found:** the system works well when the user's genre and mood are both in the catalog, but genre is weighted so heavily that it can push a poor fit to the top. For a user who asked for a sad classical song with high energy, it returned a slow classical piece first. Details are in [Profiles I Tested](#profiles-i-tested), [Experiments You Tried](#experiments-you-tried), and the [model card](model_card.md).
+
+## Features
+
+- Loads songs from `data/songs.csv` and converts the numeric columns, with no errors on all 18 rows
+- Scores any song against a user profile with `score_song`, which returns both a number and a list of reasons
+- Ranks the whole catalog and returns the top `k` songs with `recommend_songs`
+- Explains every recommendation in plain text that matches the real math
+- Includes an object-oriented `Recommender` class (with `Song` and `UserProfile`) that uses the same scoring, so the tests and the command-line runner agree
+- Supports changing the weights, which is how the energy-versus-genre experiment was run
+
+## Project Structure
+
+```plaintext
+├── data/songs.csv          # 18 songs: the starter's 10 plus 8 I added
+├── src/recommender.py      # load_songs, score_song, recommend_songs, Recommender class
+├── src/main.py             # runs five profiles and the weight experiment
+├── tests/test_recommender.py   # 4 pytest tests
+├── model_card.md           # model card: data, algorithm, bias, evaluation, reflection
+└── README.md               # this file
+```
 
 ---
 
@@ -55,28 +72,51 @@ Genre is worth the most points, so the system will favor songs that match the us
    python -m venv .venv
    source .venv/bin/activate      # Mac or Linux
    .venv\Scripts\activate         # Windows
+   ```
 
-2. Install dependencies
+2. Install dependencies:
 
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Run the app:
+3. Run the app from the repo root (not from inside `src/`):
 
-```bash
-python -m src.main
-```
+   ```bash
+   python -m src.main
+   ```
+
+   This loads the songs, prints the top 5 recommendations for each of five profiles, and then reruns two of them with the experiment weights.
 
 ### Running Tests
 
-Run the starter tests with:
-
 ```bash
-pytest
+python -m pytest -v
 ```
 
-You can add more tests in `tests/test_recommender.py`.
+The 4 tests cover:
+
+- `test_recommend_returns_songs_sorted_by_score`: a pop/happy/high-energy user gets the pop/happy song ahead of the lofi one
+- `test_explain_recommendation_returns_non_empty_string`: every recommendation comes with a non-empty explanation
+- `test_load_songs_reads_18_songs_with_numbers`: the CSV loads all 18 songs and converts `id` to an int and `energy` to a float
+- `test_score_song_gives_full_points_for_perfect_match`: a song that matches on genre, mood, and energy scores exactly 4.0, with reasons that say `genre match (+2.0)` and `mood match (+1.0)`
+
+Real output from my last run:
+
+```
+============================= test session starts =============================
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+collected 4 items
+
+tests/test_recommender.py::test_recommend_returns_songs_sorted_by_score PASSED [ 25%]
+tests/test_recommender.py::test_explain_recommendation_returns_non_empty_string PASSED [ 50%]
+tests/test_recommender.py::test_load_songs_reads_18_songs_with_numbers PASSED [ 75%]
+tests/test_recommender.py::test_score_song_gives_full_points_for_perfect_match PASSED [100%]
+
+============================== 4 passed in 0.02s ==============================
+```
+
+The tests only check the basics. They do not cover edge cases like an empty catalog or a genre that is not in the data.
 
 ---
 
@@ -223,4 +263,17 @@ The biggest weakness I found is that **genre is worth so much that it overrides 
 
 See [**Model Card**](model_card.md) for the full write-up.
 
-What I learned: a recommender is just a scoring rule plus a sort, and the weights are really opinions. Changing two weights (genre +2.0 to +1.0, energy doubled) changed which songs came out in the top five, so the "taste" the system shows is partly my design choice and not only the data. Bias can show up in simple places: a rare genre with one song, exact-text matching, or a weight that is too big. A real app with millions of songs would hide these behind much more complicated math, but the same kinds of problems would still be there.
+### What I learned
+
+A recommender is just a scoring rule plus a sort, and the weights are really opinions. Changing two weights (genre +2.0 to +1.0, energy doubled) changed which songs came out in the top five, so the "taste" the system shows is partly my design choice and not only the data. Bias can show up in simple places: a rare genre with one song, exact-text matching, or a weight that is too big. A real app with millions of songs would hide these behind much more complicated math, but the same kinds of problems would still be there.
+
+### How I used AI
+
+Claude wrote the scoring and ranking code, drafted the 8 new songs, and helped write the docs, working from decisions I approved up front: the weights (genre 2.0, mood 1.0, energy up to 1.0), the five profiles, and the experiment. I checked its work by running the program and reading the real output, and every number and example in this README comes from an actual run. One real catch: the starter's `main.py` imported `from recommender import ...`, which fails when you run `python -m src.main`, so it was changed to `from src.recommender import ...` and confirmed by running it. I accepted all of the AI's default suggestions, so I do not have a rejected suggestion to report for this project.
+
+### What I would try next
+
+- Use `likes_acoustic` and the acousticness column so that setting actually does something
+- Give partial genre credit for close genres (like "indie pop" for a "pop" fan) instead of exact matching only
+- Add a diversity rule so the top 5 are not all one genre or artist
+- Add more songs so that every genre has more than one, then re-run the profiles to see if the bias gets better or just moves
