@@ -11,23 +11,37 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+My version is a small content-based music recommender. It reads 18 songs from a CSV, compares each one to a user's taste profile (favorite genre, favorite mood, target energy), gives every song a score with a short list of reasons, and prints the top matches.
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+### How real recommenders work
 
-Some prompts to answer:
+Apps like Spotify and YouTube mix two main ideas. **Collaborative filtering** looks at what other people did: if people who play the same songs as you also play song X, it recommends X to you, even without knowing anything about the song itself. **Content-based filtering** looks at the song's own features (genre, mood, tempo, energy, how acoustic it sounds) and finds songs close to what you already like. Real systems combine both, and also use history like skips, replays, and playlists. My project is **content-based only**, since I have no listening history from other users.
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+### Input data vs. user preferences vs. ranking
 
-You can include a simple diagram or bullet list if helpful.
+- **Input data (the catalog):** `data/songs.csv`, 18 songs. Each `Song` has: `id`, `title`, `artist`, `genre`, `mood`, `energy` (0 to 1), `tempo_bpm`, `valence` (how positive it sounds), `danceability`, and `acousticness`.
+- **User preferences (the taste profile):** a `UserProfile` / preference dictionary with `favorite_genre`, `favorite_mood`, `target_energy` (0 to 1), and `likes_acoustic`. This is what the user tells the system. It is not learned from history.
+- **Ranking:** every song gets a numeric score against the profile, then the songs are sorted from highest to lowest score and the top `k` are returned with the reasons for each score.
+
+Only genre, mood, and energy are used in scoring right now. The other attributes are loaded but not used.
+
+### Algorithm Recipe
+
+For each song, the score is the sum of:
+
+1. **+2.0** if the song's genre equals the user's favorite genre.
+2. **+1.0** if the song's mood equals the user's favorite mood.
+3. **Energy closeness:** `1.0 - |song energy - target energy|`, which is between 0 and +1.0. A song that matches the target exactly gets the full +1.0, and a song on the opposite end of the scale gets about 0.
+
+The maximum possible score is **4.0**. Each rule that fires adds a reason like `genre match (+2.0)`. Songs are sorted by score, highest first, and the top `k` are returned.
+
+### Expected bias
+
+Genre is worth the most points, so the system will favor songs that match the user's genre even when a song in another genre is a much better fit on mood and energy. Because the catalog is tiny (most genres have exactly one song), a genre match will often be the only song of that genre, and a user whose favorite genre is missing from the catalog never gets the +2.0 for any song. Exact string matching also means "indie pop" gets no credit for a "pop" preference.
 
 ---
 
